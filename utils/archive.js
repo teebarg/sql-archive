@@ -3,20 +3,28 @@ const mysql = require('mysql');
 const SqlString = require('sqlstring');
 const ora = require('ora');
 const cli = require('./cli');
+const readPermission = require('./readPerm');
 const flags = cli.flags;
-const { host, user, password, database, table, limit, date } = flags;
+const { host, user, password, database, table, limit, date, pem } = flags;
 
 const black = chalk.hex('#000000');
 
 module.exports = async function archive() {
-	const con = mysql.createConnection({host, user, password, database});
+    let credentials
+    if(pem){
+        credentials = await readPermission(pem);
+    } else {
+        credentials = { host, user, password, database };
+    }
+
+	const con = mysql.createConnection(credentials);
     const spinner = ora('Running Tasks');
 	con.connect(function (err) {
 		if (err) {
 			spinner.fail(chalk.red(err.message));
 			process.exit(1);
 		}
-        console.log(`Archiving Table ${chalk.bgCyan.bold(black(` ${table} `))}`);
+        console.log(`Archiving items in Table ${chalk.bgCyan.bold(black(` ${table} `))} created before ${chalk.cyan.bold(date)}`);
         spinner.start()
 
         const sql    = SqlString.format(`SELECT * FROM ${table} WHERE created <= ? LIMIT ${limit}`, [date]);
@@ -58,7 +66,7 @@ module.exports = async function archive() {
                             spinner.fail(chalk.red(err.message));
 							process.exit(1);
 						}
-						spinner.text = `${chalk.magenta(index + 1)}). Row id ${chalk.green(`${ids[index]}`)} successfully moved`;
+						spinner.text = `${chalk.magenta(index + 1)}). Row id ${chalk.green(`${ids[index]}`)} successfully moved to ${chalk.yellow(`archived_${table}`)}`;
 						spinner.succeed();
 					});
 				}

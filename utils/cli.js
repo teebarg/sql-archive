@@ -57,9 +57,14 @@ const flags = {
 	},
 	date: {
 		type: `string`,
-		default: `2020-01-01`,
-		alias: `dt`,
-		desc: `The records to limit the number of records`
+		default: `2021-01-01`,
+		alias: `z`,
+		desc: `The is used to limit results to the specified date`
+	},
+	pem: {
+		type: `string`,
+		alias: `i`,
+		desc: `A permission file with the database credentials`
 	}
 };
 
