@@ -1,0 +1,2 @@
+host, user, password, database
+db.host.com, root, password, database_name
