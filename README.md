@@ -33,10 +33,10 @@ sqa archive -i <input_file> -t <table_name> -l <limit> -z <date>
 
 ## Options
 
--i, --input-file <input_file>: The input file that contains the database credentials (host, user, password, and database name).
--t, --table-name <table_name>: The name of the table from which the data should be archived.
--l, --limit <limit>: The number of rows to be archived (optional, default is 100).
--z, --date <date>: The date before which the data should be archived (optional, default is 2022-01-01).
+- -i, --input-file <input_file>: The input file that contains the database credentials (host, user, password, and database name).
+- -t, --table-name <table_name>: The name of the table from which the data should be archived.
+- -l, --limit <limit>: The number of rows to be archived (optional, default is 100).
+- -z, --date <date>: The date before which the data should be archived (optional, default is 2022-01-01).
 
 ## Input file format
 

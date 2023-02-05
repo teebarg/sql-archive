@@ -1,7 +1,7 @@
 {
 	"name": "sql-archive",
 	"description": "A CLI to archive sql tables",
-	"version": "0.1.0",
+	"version": "0.1.2",
 	"license": "MIT",
 	"bin": {
 		"sql-archive": "index.js",
@@ -17,7 +17,8 @@
 		"Adeniyi",
 		"Aderounmu",
 		"cli",
-		"nodejs"
+		"nodejs",
+		"javascript"
 	],
 	"files": [
 		"index.js",
