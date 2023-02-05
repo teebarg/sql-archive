@@ -1,12 +1,13 @@
-const alert = require('cli-alerts');
+const chalk = require('chalk');
+const blue = chalk.blue;
+const blueI = chalk.blue.inverse;
 
 module.exports = info => {
-	alert({
-		type: `warning`,
-		name: `DEBUG LOG`,
-		msg: ``
-	});
+	console.log(
+		`\n${blueI(` DEBUG LOG `)} ${blue('')}\n`
+	);
 
 	console.log(info);
 	console.log();
 };
+

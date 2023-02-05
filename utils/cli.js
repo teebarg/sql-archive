@@ -51,7 +51,7 @@ const flags = {
 	},
 	limit: {
 		type: `number`,
-		default: 1,
+		default: 50,
 		alias: `l`,
 		desc: `The records to limit the number of records`
 	},

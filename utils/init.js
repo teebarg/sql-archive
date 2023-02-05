@@ -1,9 +1,11 @@
-const welcome = require('cli-welcome');
+const welcome = require('./welcome');
 const pkg = require('./../package.json');
-const unhandled = require('cli-handle-unhandled');
+const handleError = require('./err');
 
 module.exports = ({ clear = true }) => {
-	unhandled();
+	process.on('unhandledRejection', err => {
+		handleError(`UNHANDLED ERROR`, err);
+	});
 	welcome({
 		title: `sql-archive`,
 		tagLine: `by Adeniyi Aderounmu(teebarg01@gmail.com)`,
