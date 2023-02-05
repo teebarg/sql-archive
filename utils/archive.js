@@ -1,6 +1,5 @@
 const chalk = require('chalk');
 const mysql = require('mysql');
-const SqlString = require('sqlstring');
 const ora = require('ora');
 const cli = require('./cli');
 const readPermission = require('./readPerm');
@@ -10,66 +9,100 @@ const { host, user, password, database, table, limit, date, pem } = flags;
 const black = chalk.hex('#000000');
 
 module.exports = async function archive() {
-    let credentials
-    if(pem){
-        credentials = await readPermission(pem);
-    } else {
-        credentials = { host, user, password, database };
-    }
+	const credentials = pem ? await readPermission(pem) : ({ host, user, password, database });
 
-	const con = mysql.createConnection(credentials);
-    const spinner = ora('Running Tasks');
-	con.connect(function (err) {
+	const connection = mysql.createConnection(credentials);
+	const spinner = ora('Running Tasks.....');
+	connection.connect(function (err) {
 		if (err) {
 			spinner.fail(chalk.red(err.message));
 			process.exit(1);
 		}
-        console.log(`Archiving items in Table ${chalk.bgCyan.bold(black(` ${table} `))} created before ${chalk.cyan.bold(date)}`);
-        spinner.start()
+		console.log(chalk.green.bold('Connected to the database.'));
+		console.log(
+			`Archiving items in Table ${chalk.bgCyan.bold(
+				black(` ${table} `)
+			)} created before ${chalk.cyan.bold(date)} limit ${chalk.red.bold(limit)}`
+		);
+		console.log();
+		spinner.start();
 
-        const sql    = SqlString.format(`SELECT * FROM ${table} WHERE created <= ? LIMIT ${limit}`, [date]);
-		con.query(sql, function (err, result, fields) {
+		// Get the column names from the table
+		connection.query(`DESCRIBE ${table}`, function (err, result) {
 			if (err) {
 				spinner.fail(chalk.red(err.message));
 				process.exit(1);
-			} else if (result.length === 0) {
-				spinner.warn(chalk.yellow(`Table ${chalk.bold(table)} is empty, aborting!!!`));
-				process.exit(1);
 			}
-			spinner.text = `${chalk.green(`${result.length}`)} records will be archived`;
-			spinner.succeed();
-			const columns = fields.reduce((result, field) => {
-				if (field.name != 'id') {
-					result.push(field.name);
-				}
-				return result;
-			}, []);
 
-			const ids = [];
-			const values = result.map(result => {
-				const p = Object.values(result);
-				ids.push(p.shift());
-				return p;
-			});
+			const columnNames = result.map(column => column.Field).join(', ');
+			const insertQuery = `INSERT IGNORE INTO archived_${table} (${columnNames}) SELECT * FROM ${table} WHERE created < ${connection.escape(
+				date
+			)} LIMIT ${limit}`;
+			const deleteQuery = `DELETE FROM ${table} WHERE created < ${connection.escape(
+				date
+			)} LIMIT ${limit}`;
 
-			const query =`INSERT INTO archived_${table} (` + SqlString.format('??', [columns]) + ') VALUES ?';
-			con.query(query, [values], function (err) {
+			connection.beginTransaction(function (err) {
 				if (err) {
-                    spinner.fail(chalk.red(err.message));
+					spinner.fail(chalk.red(err.message));
 					process.exit(1);
 				}
 
-				for (let index = 0; index < ids.length; index++) {
-					const query = `DELETE FROM ${table} WHERE id=${ids[index]}`;
-					con.query(query, function (err) {
+				connection.query(insertQuery, function (err, result) {
+					if (err) {
+						connection.rollback(function () {
+							spinner.fail(chalk.red(err.message));
+							process.exit(1);
+						});
+					}
+
+					if (!result) {
+						spinner.fail(chalk.red('No records to archive!!!'));
+						process.exit(1);
+					}
+					console.log();
+					console.log(
+						`DB Response: ${chalk.bold.magenta(result.message)}`
+					);
+
+					spinner.text = `Moved ${chalk.green(
+						result.affectedRows
+					)} rows to ${chalk.yellow(`archived_${table}`)}.`;
+					spinner.succeed();
+
+					connection.query(deleteQuery, function (err, result) {
 						if (err) {
-                            spinner.fail(chalk.red(err.message));
+							connection.rollback(function () {
+								spinner.fail(chalk.red(err.message));
+								process.exit(1);
+							});
+						}
+						if (!result) {
+							spinner.fail(
+								chalk.red('Records cannot be deleted!!!')
+							);
 							process.exit(1);
 						}
-						spinner.text = `${chalk.magenta(index + 1)}). Row id ${chalk.green(`${ids[index]}`)} successfully moved to ${chalk.yellow(`archived_${table}`)}`;
+
+						spinner.text = `Deleted ${chalk.red(
+							result.affectedRows
+						)} rows from ${chalk.yellow(`${table}`)}.`;
 						spinner.succeed();
+
+						connection.commit(function (err) {
+							if (err) {
+								connection.rollback(function () {
+									spinner.fail(chalk.red(err.message));
+									process.exit(1);
+								});
+							}
+							console.log(
+								chalk.bold.green('Transaction complete.')
+							);
+							connection.end();
+						});
 					});
-				}
+				});
 			});
 		});
 	});

@@ -1,0 +1,2 @@
+host, user, password, database
+supermart-live.c5lzn3u7dcvu.eu-west-1.rds.amazonaws.com, root, 6PT.iO!QO8TZ, supermart
